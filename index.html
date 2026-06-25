@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador WebAR Automatizado</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #111; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { text-align: center; background: #222; padding: 25px; border-radius: 16px; width: 85%; max-width: 380px; border: 1px solid #333; }
+        h1 { font-size: 1.6rem; margin: 0; color: #00e5ff; }
+        p { color: #aaa; font-size: 0.9rem; margin: 10px 0 20px 0; }
+        model-viewer { width: 100%; height: 320px; background-color: #1a1a1a; border-radius: 12px; margin-bottom: 20px; }
+        .btn-ar { background: linear-gradient(135deg, #007bff, #00e5ff); color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; }
+        .loading { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1 id="txt-lote">Conectando...</h1>
+        <p id="txt-info">Buscando información del lote en la base de datos.</p>
+
+        <model-viewer id="visor" src="" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1" style="display:none;">
+            <button slot="ar-button" class="btn-ar">🏢 VER EN EL TERRENO</button>
+        </model-viewer>
+        <div id="status" class="loading">Cargando datos...</div>
+    </div>
+
+    <script>
+        // ==========================================
+        // PEGA AQUÍ TU ENLACE DE GOOGLE SHEETS (CSV)
+        // ==========================================
+        const URL_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQrH1cqJKfyCOYazMfFMMl0UiY9Kf9AGKySUlzDQFNBdkWnTeybXHDDxzdlFwOOeS7xW-P-URy6g6Xe/pub?output=csv";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const loteBuscado = urlParams.get('lote');
+
+        const txtLote = document.getElementById('txt-lote');
+        const txtInfo = document.getElementById('txt-info');
+        const visor = document.getElementById('visor');
+        const status = document.getElementById('status');
+
+        // Función para extraer el ID de un enlace de Google Drive
+        function obtenerIdDrive(url) {
+            const regExp = /\/d\/([a-zA-Z0-9-_]+)/;
+            const matches = url.match(regExp);
+            return matches ? matches[1] : null;
+        }
+
+        if (loteBuscado) {
+            txtLote.innerText = `Lote N° ${loteBuscado}`;
+            
+            // Consultar la hoja de cálculo en tiempo real
+            fetch(URL_SHEET_CSV)
+                .then(response => response.text())
+                .then(data => {
+                    // Procesar las filas del CSV
+                    const filas = data.split("\n");
+                    let modeloEncontrado = null;
+
+                    for (let i = 1; i < filas.length; i++) {
+                        const columnas = filas[i].split(",");
+                        if (columnas[0] && columnas[0].trim() === loteBuscado.trim()) {
+                            modeloEncontrado = columnas[1] ? columnas[1].trim() : null;
+                            break;
+                        }
+                    }
+
+                    if (modeloEncontrado) {
+                        const idDrive = obtenerIdDrive(modeloEncontrado);
+                        if (idDrive) {
+                            const urlDescargaDirecta = `https://docs.google.com/uc?export=download&id=${idDrive}`;
+                            visor.setAttribute('src', urlDescargaDirecta);
+                            visor.style.display = 'block';
+                            status.style.display = 'none';
+                            txtInfo.innerText = "¡Listo! Toca el botón de abajo para posicionar la casa.";
+                        } else {
+                            status.innerText = "Error: El enlace de Drive no es válido.";
+                        }
+                    } else {
+                        status.innerText = "Lote disponible o no registrado.";
+                        txtInfo.innerText = "Este lote aún no tiene un modelo 3D asignado.";
+                    }
+                })
+                .catch(err => {
+                    status.innerText = "Error de conexión con la base de datos.";
+                    console.error(err);
+                });
+        } else {
+            txtLote.innerText = "Error de Acceso";
+            status.innerText = "Escanea un código QR válido del lote.";
+        }
+    </script>
+</body>
+</html>
