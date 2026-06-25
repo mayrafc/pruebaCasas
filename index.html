@@ -14,8 +14,8 @@
         .btn-ar { background: linear-gradient(135deg, #007bff, #00e5ff); color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; }
         .loading-status { color: #ffc107; font-weight: bold; margin-bottom: 15px; font-size: 0.95rem; }
         
-        /* Estilo para la barra de progreso nativa */
-        #progress-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00e5ff; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; pointer-events: none; }
+        /* Estilo para el contenedor del mensaje de carga */
+        #progress-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00e5ff; font-weight: bold; background: rgba(0,0,0,0.85); padding: 12px 24px; border-radius: 8px; pointer-events: none; border: 1px solid #333; z-index: 10; }
     </style>
 </head>
 <body>
@@ -47,6 +47,7 @@
         const txtInfo = document.getElementById('txt-info');
         const visor = document.getElementById('visor');
         const status = document.getElementById('status');
+        const progressContainer = document.getElementById('progress-container');
         const porcentajeTxt = document.getElementById('porcentaje');
 
         function obtenerIdDrive(url) {
@@ -75,7 +76,6 @@
                     if (modeloEncontrado) {
                         let urlFinal = modeloEncontrado;
                         
-                        // Si el enlace cargado es de Google Drive, lo adaptamos dinámicamente
                         if (modeloEncontrado.includes("drive.google.com")) {
                             const idDrive = obtenerIdDrive(modeloEncontrado);
                             if (idDrive) {
@@ -83,20 +83,21 @@
                             }
                         }
 
-                        // Inicializar el visor con la URL resuelta
                         visor.setAttribute('src', urlFinal);
                         visor.style.display = 'block';
                         status.style.display = 'none';
                         txtInfo.innerText = "Descargando la arquitectura de la casa...";
 
-                        // Monitorear el progreso real de la descarga del binario 3D
+                        // Monitorear el progreso numérico de la descarga
                         visor.addEventListener('progress', (event) => {
                             const progreso = Math.round(event.detail.totalProgress * 100);
                             porcentajeTxt.innerText = `${progreso}%`;
-                            
-                            if (progreso === 100) {
-                                txtInfo.innerText = "¡Estructura lista! Presiona el botón para proyectar la propiedad.";
-                            }
+                        });
+
+                        // EVENTO CLAVE: Se ejecuta automáticamente cuando la casa está lista y dibujada
+                        visor.addEventListener('load', () => {
+                            progressContainer.style.display = 'none'; // Desaparece por completo el cuadro gris de carga
+                            txtInfo.innerText = "¡Estructura lista! Presiona el botón para proyectar la propiedad.";
                         });
 
                     } else {
